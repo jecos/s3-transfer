@@ -1,3 +1,8 @@
+![](https://github.com/Ferlab-Ste-Justine/
+s3-transfer/workflows/Build/badge.svg)
+![](https://github.com/Ferlab-Ste-Justine/
+s3-transfer/workflows/Publish Image%20Using%20Commit%20Hash/badge.svg)
+
 # About
 
 This docker image is meant to help transfer files between any of the following:
