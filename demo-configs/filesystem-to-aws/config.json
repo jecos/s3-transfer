@@ -1,0 +1,12 @@
+{
+    "source": {
+        "type": "directory",
+        "path": "src"
+    },
+    "destination": {
+        "type": "s3",
+        "endpoint": "s3.us-east-1.amazonaws.com",
+        "bucket": "<Enter your bucket name>",
+        "credentials_path": "/opt/demo-configs/credentials_aws.json"
+    }
+}

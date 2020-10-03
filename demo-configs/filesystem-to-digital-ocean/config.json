@@ -1,0 +1,12 @@
+{
+    "source": {
+        "type": "directory",
+        "path": "src"
+    },
+    "destination": {
+        "type": "s3",
+        "endpoint": "nyc3.digitaloceanspaces.com",
+        "bucket": "<Enter your bucket name>",
+        "credentials_path": "/opt/demo-configs/credentials_digital_ocean.json"
+    }
+}

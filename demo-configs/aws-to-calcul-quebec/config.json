@@ -1,0 +1,14 @@
+{
+    "source": {
+        "type": "s3",
+        "endpoint": "s3.us-east-1.amazonaws.com",
+        "bucket": "<Enter your bucket name>",
+        "credentials_path": "/opt/demo-configs/credentials_aws.json"
+    },
+    "destination": {
+        "type": "s3",
+        "endpoint": "https://esc.calculquebec.ca:8080",
+        "bucket": "<Enter your bucket name>",
+        "credentials_path": "/opt/demo-configs/credentials_ceph.json"
+    }
+}

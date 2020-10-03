@@ -1,0 +1,17 @@
+{
+    "name": "s3-transfer",
+    "version": "1.0.0",
+    "description": "Transfer S3 Bucket Information",
+    "main": "./src/index.js",
+    "scripts": {
+      "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "author": "Eric Vallee (eric_vallee@webificservices.com)",
+    "license": "Apache-2.0",
+    "dependencies": {
+      "ramda": "^0.27.1",
+      "rxjs": "^6.6.2",
+      "aws-sdk": "^2.763.0"
+    }
+  }
+  
