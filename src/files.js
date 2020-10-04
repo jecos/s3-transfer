@@ -1,6 +1,6 @@
 const fs = require('fs')
 const pathMod = require('path')
-const { from, of, Observable, bindNodeCallback, throwError, zip } = require('rxjs')
+const { from, of, Observable, bindNodeCallback, throwError, zip, merge } = require('rxjs')
 const { mergeMap, map } = require('rxjs/operators')
 const R = require('ramda')
 
@@ -62,10 +62,20 @@ const readDirectoryRecursive$ = (path) => {
 }
 
 const streamDirectory$ = R.curry((path, concurrency) => {
+  return of(path)
+    .pipe(
+      mergeMap(readDirectoryRecursive$, null, concurrency),
+      map((filePath) => createFileStream(filePath, fs.createReadStream(filePath)))
+    )
+})
+
+const streamDirectories$ = R.curry((paths, concurrency) => {
+  const getStreams$ = () => merge.apply(
+    null, R.map(streamDirectory$(R.__, Number.POSITIVE_INFINITY), paths)
+  )
   return of(0)
     .pipe(
-      mergeMap(() => readDirectoryRecursive$(path), null, concurrency),
-      map((filePath) => createFileStream(filePath, fs.createReadStream(filePath)))
+      mergeMap(getStreams$, null, concurrency)
     )
 })
 
@@ -93,4 +103,4 @@ const ifPathNotExists$ = R.curry((path, runIfNotExist$, input) => {
   })
 })
 
-module.exports = { ensureFileExists$, readFile$, readDirectory$, streamDirectory$, ifPathNotExists$, fileStreamAccessors }
+module.exports = { ensureFileExists$, readFile$, readDirectory$, streamDirectory$, streamDirectories$, ifPathNotExists$ }

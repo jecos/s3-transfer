@@ -2,11 +2,11 @@ const aws = require('aws-sdk');
 const R = require('ramda');
 const { mergeMap, tap } = require('rxjs/operators')
 
-const { fileStreamAccessors, streamDirectory$ } = require('./files')
+const { streamDirectories$ } = require('./files')
 const { uploadStreamToS3$, s3BucketDownload$ } = require('./s3')
 
 const { getConfig$ } = require('./configs')
-const { configAccessors } = require('./structures')
+const { configAccessors, fileStreamAccessors } = require('./structures')
 
 const CONCURRENCY = parseInt(process.env.CONCURRENCY)
 const CONFIG_PATH = process.env.CONFIG_PATH
@@ -24,8 +24,8 @@ const sourceObservable = R.ifElse(
     ]
   ),
   R.compose(
-    streamDirectory$(R.__, CONCURRENCY), 
-    configAccessors.sourceDirectoryPath
+    streamDirectories$(R.__, CONCURRENCY), 
+    configAccessors.sourceDirectoryPaths
   )
 )
 
@@ -47,10 +47,10 @@ getConfig$(CONFIG_PATH)
   .subscribe(
     (config) => {
       sourceObservable(config)
-        .pipe(mergeMap(
-          destinationObservable(config)
-        ))
-        .pipe(tap((sourceStream) => {console.log(`Transfered: ${streamPath(sourceStream)}`)}))
+        .pipe(
+          mergeMap(destinationObservable(config)),
+          tap((sourceStream) => {console.log(`Transfered: ${streamPath(sourceStream)}`)})
+        )
         .subscribe(
           () => {},
           handleError,

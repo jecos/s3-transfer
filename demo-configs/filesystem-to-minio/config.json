@@ -1,7 +1,7 @@
 {
     "source": {
         "type": "directory",
-        "path": "src"
+        "paths": ["src", "demo-configs"]
     },
     "destination": {
         "type": "s3",

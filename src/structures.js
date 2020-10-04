@@ -22,7 +22,7 @@ const configAccessors = {
   destinationCredentials: R.path(['destination', 'credentials']),
   destinationCredentialsLens: R.lensPath(['destination', 'credentials']),
   sourceIsS3: R.compose(R.equals('s3'), R.path(['source', 'type'])),
-  sourceDirectoryPath: R.path(['source', 'path']),
+  sourceDirectoryPaths: R.path(['source', 'paths']),
   sourceS3Bucket: R.path(['source', 'bucket']),
   destinationS3Bucket: R.path(['destination', 'bucket']),
   sourceS3Endpoint: R.path(['source', 'endpoint']),
