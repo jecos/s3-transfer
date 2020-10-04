@@ -22,7 +22,6 @@ The image has been validated with the following S3 implementations:
 ## Filesystem
 
 The following functionalities are not yet implemented for the filesystem:
-- Recursive traversal of directories
 - Having the filesystem as the destination (currently, it is only supported as a source)
 - Special characters: No escaping is currently perform on file paths
 

@@ -1,6 +1,6 @@
 const fs = require('fs')
 const pathMod = require('path')
-const { from, Observable } = require('rxjs')
+const { from, of, Observable, bindNodeCallback, throwError, zip } = require('rxjs')
 const { mergeMap, map } = require('rxjs/operators')
 const R = require('ramda')
 
@@ -12,59 +12,61 @@ const createFileStream = R.curry((path, stream) => R.compose(
   )({})
 )
 
+const fsStat$ = bindNodeCallback(fs.stat)
 const ensureFileExists$ = (path) => {
-  return new Observable(function (observer) {
-    const unsubscribe = () => {}
-    fs.stat(path, (err, stats) => {
-      if (err) {
-        return observer.error(err)
-      }
-      if (!stats.isFile()) {
-        return observer.error(`${path} is not a file`)
-      }
-      observer.next(path)
-      observer.complete()
-    })
-    return unsubscribe
-  })
+  return fsStat$(path)
+    .pipe(mergeMap(
+      R.ifElse(
+        (stats) => stats.isFile(),
+        () => of(path),
+        () => throwError(`${path} is not a file`)
+      )
+    ))
 }
 
+const fsReadFile$ = bindNodeCallback(fs.readFile)
 const readFile$ = R.curry((parser, path) => {
-  return new Observable(function (observer) {
-    const unsubscribe = () => {}
-    fs.readFile(path, 'utf8', (err, content) => {
-      if (err) {
-        return observer.error(err)
-      }
-      try {
-        observer.next(parser(content))
-        observer.complete()
-      } catch (err) {
-        observer.error(`${path} is not parsable`)
-      }
-    })
-    return unsubscribe
-  })
+  return fsReadFile$(path, 'utf8')
+    .pipe(map(parser))
 })
 
-const readDirectory$ = R.curry((path) => {
-  return new Observable(function (observer) {
-    const unsubscribe = () => {}
-    fs.readdir(path, (err, files) => {
-      if (err) {
-        return observer.error(err)
-      }
-      observer.next(R.map((file) => pathMod.join(path, file), files))
-      observer.complete()
-    })
-    return unsubscribe
-  })
-})
+const fsreaddir$ = bindNodeCallback(fs.readdir)
+const readDirectory$ = (path) => {
+  return fsreaddir$(path)
+    .pipe(map(
+      R.map((file) => pathMod.join(path, file))
+    ))
+}
+
+const isDir$ = (path) => {
+  return fsStat$(path)
+    .pipe(map(stats => stats.isDirectory()))
+}
+
+//Given that Node no longer supports TCO, the recursion here might theoretically blow up the stack in a
+//extremely nested directory structure (nested well beyond what is manageable for a human). In practice,
+//I don't believe we'll ever encounter a directory structure so deeply nested that it will be a problem.
+const readDirectoryRecursive$ = (path) => {
+  return readDirectory$(path)
+    .pipe(
+      mergeMap(from),
+      mergeMap((filePath) => zip(isDir$(filePath), of(filePath))),
+      mergeMap(([isDir, filePath]) => {
+        if(isDir) {
+          return readDirectoryRecursive$(filePath)
+        } else {
+          return of(filePath)
+        }
+      })
+    )
+}
 
 const streamDirectory$ = R.curry((path, concurrency) => {
-  return readDirectory$(path)
-    .pipe(mergeMap(from, null, concurrency))
-    .pipe(map((filePath) => createFileStream(filePath, fs.createReadStream(filePath))))
+  return of(0)
+    .pipe(
+      mergeMap(() => readDirectoryRecursive$(path), null, concurrency),
+      map((filePath) => createFileStream(filePath, fs.createReadStream(filePath)))
+    )
 })
 
 const ifPathNotExists$ = R.curry((path, runIfNotExist$, input) => {
