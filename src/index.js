@@ -4,6 +4,7 @@ const { mergeMap, tap } = require('rxjs/operators')
 
 const { streamDirectories$ } = require('./files')
 const { uploadStreamToS3$, s3BucketDownload$ } = require('./s3')
+const { chunk$ } = require('./generic')
 
 const { getConfig$ } = require('./configs')
 const { configAccessors, fileStreamAccessors } = require('./structures')
@@ -16,7 +17,7 @@ const streamPath = R.view(fileStreamAccessors.pathLens)
 const sourceObservable = R.ifElse(
   configAccessors.sourceIsS3,
   R.converge(
-    s3BucketDownload$(R.__, R.__, R.__, CONCURRENCY), 
+    s3BucketDownload$, 
     [
       configAccessors.sourceS3Bucket,
       configAccessors.sourceS3Endpoint,
@@ -24,7 +25,7 @@ const sourceObservable = R.ifElse(
     ]
   ),
   R.compose(
-    streamDirectories$(R.__, CONCURRENCY), 
+    streamDirectories$, 
     configAccessors.sourceDirectoryPaths
   )
 )
@@ -46,16 +47,19 @@ function handleError (err) {
 getConfig$(CONFIG_PATH)
   .subscribe(
     (config) => {
-      sourceObservable(config)
-        .pipe(
+      chunk$(
+        sourceObservable(config),
+        (chunked$) => chunked$.pipe(
+          tap((sourceStream) => {console.log(`Transferring: ${streamPath(sourceStream)}`)}),
           mergeMap(destinationObservable(config)),
-          tap((sourceStream) => {console.log(`Transfered: ${streamPath(sourceStream)}`)})
-        )
-        .subscribe(
-          () => {},
-          handleError,
-          () => { console.log('Done!') }
-        )
+          tap((sourceStream) => {console.log(`Transferred: ${streamPath(sourceStream)}`)})
+        ),
+        CONCURRENCY
+      ).subscribe(
+        () => {},
+        handleError,
+        () => { console.log('Done!') }
+      )
     },
     handleError,
     () => {}

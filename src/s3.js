@@ -91,9 +91,9 @@ const s3ObjectDownload$ = R.curry((bucket, endpoint, credentials, object) => {
   })
 })
 
-const s3BucketDownload$ = R.curry((bucket, endpoint, credentials, concurrency) => {
+const s3BucketDownload$ = R.curry((bucket, endpoint, credentials) => {
   return listS3BucketObjects$(bucket, endpoint, credentials)
-    .pipe(mergeMap(from, null, concurrency))
+    .pipe(mergeMap(from))
     .pipe(map(getS3ObjectMetadataKey))
     .pipe(mergeMap(s3ObjectDownload$(bucket, endpoint, credentials)))
 })

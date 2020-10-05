@@ -5,7 +5,7 @@ services:
     build: .
     environment:
       CONFIG_PATH: /opt/demo-configs/filesystem-to-minio/config.json
-      CONCURRENCY: 5
+      CONCURRENCY: 3
     volumes:
       - .:/opt
     networks:

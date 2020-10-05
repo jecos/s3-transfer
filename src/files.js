@@ -61,23 +61,16 @@ const readDirectoryRecursive$ = (path) => {
     )
 }
 
-const streamDirectory$ = R.curry((path, concurrency) => {
-  return of(path)
+const streamDirectory$ = (path) => {
+  return readDirectoryRecursive$(path)
     .pipe(
-      mergeMap(readDirectoryRecursive$, null, concurrency),
       map((filePath) => createFileStream(filePath, fs.createReadStream(filePath)))
     )
-})
+}
 
-const streamDirectories$ = R.curry((paths, concurrency) => {
-  const getStreams$ = () => merge.apply(
-    null, R.map(streamDirectory$(R.__, Number.POSITIVE_INFINITY), paths)
-  )
-  return of(0)
-    .pipe(
-      mergeMap(getStreams$, null, concurrency)
-    )
-})
+const streamDirectories$ = (paths) => {
+  return merge.apply(null, R.map(streamDirectory$, paths))
+}
 
 const ifPathNotExists$ = R.curry((path, runIfNotExist$, input) => {
   return new Observable(function (observer) {
