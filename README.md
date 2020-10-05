@@ -1,7 +1,5 @@
-![](https://github.com/Ferlab-Ste-Justine/
-s3-transfer/workflows/Build/badge.svg)
-![](https://github.com/Ferlab-Ste-Justine/
-s3-transfer/workflows/Publish Image%20Using%20Commit%20Hash/badge.svg)
+![](https://github.com/Ferlab-Ste-Justine/s3-transfer/workflows/Build/badge.svg)
+![](https://github.com/Ferlab-Ste-Justine/s3-transfer/workflows/Publish%20Image%20Using%20Commit%20Hash/badge.svg)
 
 # About
 
