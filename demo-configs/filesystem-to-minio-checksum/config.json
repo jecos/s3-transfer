@@ -1,5 +1,5 @@
 {
-    "operation": "transfer",
+    "operation": "checksum",
     "source": {
         "type": "directory",
         "paths": ["src", "demo-configs"]

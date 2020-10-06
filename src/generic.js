@@ -1,3 +1,5 @@
+const crypto = require('crypto')
+
 const { from, of, Observable, concat } = require('rxjs')
 const R = require('ramda')
 
@@ -34,4 +36,25 @@ const chunk$ = (input$, processingFn, chunkSize) => {
   })
 }
 
-module.exports = { chunk$ }
+const streamChecksum$ = (stream) => {
+  return new Observable(function (observer) {
+    const hash = crypto.createHash('md5').setEncoding('hex')
+
+    stream.on('error', err => {
+      observer.error(`Checkum computation failed: ${err.message}`)
+      stream.destroy()
+    })
+
+    stream.on('close', () => {
+      observer.next(hash.read())
+      observer.complete()
+    })
+
+    stream.pipe(hash)
+
+    const unsubscribe = () => { stream.destroy() }
+    return unsubscribe
+  })
+}
+
+module.exports = { chunk$, streamChecksum$ }

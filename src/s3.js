@@ -1,9 +1,11 @@
 const stream = require('stream')
+const crypto = require('crypto')
 const aws = require('aws-sdk')
 const R = require('ramda')
-const { from, Observable } = require('rxjs')
-const { mergeMap, map, tap } = require('rxjs/operators')
+const { of, from, Observable, zip, throwError } = require('rxjs')
+const { mergeMap, map } = require('rxjs/operators')
 
+const { streamChecksum$ } = require('./generic')
 const { fileStreamAccessors, accessKeyAccessors, s3ObjectMetadataAccessors, s3BucketObjectsAccessors } = require('./structures')
 
 const getAccessKeyId = R.view(accessKeyAccessors.idLens)
@@ -73,22 +75,27 @@ const listS3BucketObjects$ = R.curry((bucket, endpoint, credentials) => {
   })
 })
 
-const s3ObjectDownload$ = R.curry((bucket, endpoint, credentials, object) => {
-  return new Observable(function (observer) {
-    const unsubscribe = () => {}
-    const endpointInst = new aws.Endpoint(endpoint);
-    const s3 = new aws.S3({
-      endpoint: endpointInst,
-      accessKeyId: credentials.accessKeyId,
-      secretAccessKey: credentials.secretAccessKey,
-      s3ForcePathStyle: true,
-      signatureVersion: 'v4'
-    })
-    const stream = s3.getObject({Bucket: bucket, Key: object}).createReadStream()
-    observer.next(createFileStream(object, stream))
-    observer.complete()
-    return unsubscribe
+const s3ObjectReadStream$ = (bucket, endpoint, credentials, sourceStream) => {
+  const endpointInst = new aws.Endpoint(endpoint);
+  const s3 = new aws.S3({
+    endpoint: endpointInst,
+    accessKeyId: getAccessKeyId(credentials),
+    secretAccessKey: getAccessKeySecret(credentials),
+    s3ForcePathStyle: true,
+    signatureVersion: 'v4'
   })
+  const s3Stream = s3.getObject({
+    Bucket: bucket, 
+    Key: getFilestreamPath(sourceStream)
+  }).createReadStream()
+  return of(s3Stream)
+}
+
+const s3ObjectDownload$ = R.curry((bucket, endpoint, credentials, object) => {
+  return s3ObjectReadStream$(bucket, endpoint, credentials, object)
+    .pipe(
+      map((s3Stream) => createFileStream(object, s3Stream))
+    )
 })
 
 const s3BucketDownload$ = R.curry((bucket, endpoint, credentials) => {
@@ -98,4 +105,24 @@ const s3BucketDownload$ = R.curry((bucket, endpoint, credentials) => {
     .pipe(mergeMap(s3ObjectDownload$(bucket, endpoint, credentials)))
 })
 
-module.exports = { uploadStreamToS3$, listS3BucketObjects$, s3ObjectDownload$, s3BucketDownload$ }
+const isStreamHashOnS3Match$ = R.curry((bucket, endpoint, credentials, sourceStream) => {
+  return zip(
+    s3ObjectReadStream$(bucket, endpoint, credentials, sourceStream)
+      .pipe(mergeMap(streamChecksum$)),
+    streamChecksum$(getFilestreamStream(sourceStream))
+  )
+    .pipe(map(R.converge(R.equals, [R.prop(0), R.prop(1)])))
+})
+
+const verifyStreamHashOnS3$ = R.curry((bucket, endpoint, credentials, sourceStream) => {
+  return isStreamHashOnS3Match$(bucket, endpoint, credentials, sourceStream)
+    .pipe(mergeMap(
+      R.ifElse(
+        R.identity,
+        () => of(sourceStream),
+        () => throwError(`Checksum for does not match for: ${getFilestreamPath(sourceStream)} `)
+      )
+    ))
+})
+
+module.exports = { uploadStreamToS3$, listS3BucketObjects$, s3ObjectReadStream$, s3ObjectDownload$, s3BucketDownload$, isStreamHashOnS3Match$, verifyStreamHashOnS3$ }

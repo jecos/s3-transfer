@@ -7,6 +7,8 @@ This docker image is meant to help transfer files between any of the following:
 - A filesystem
 - S3 compatible object stores
 
+It also supports checksum verification
+
 # Tested Implementations
 
 The image has been validated with the following S3 implementations:
@@ -21,7 +23,7 @@ The image has been validated with the following S3 implementations:
 
 The following functionalities are not yet implemented for the filesystem:
 - Having the filesystem as the destination (currently, it is only supported as a source)
-- Special characters: No escaping is currently perform on file paths
+- Special characters: No escaping is currently performed on file paths. This hasn't been a problem so far, but I haven't done extensive research to verify that all valid characters for filenames are also valid characters for s3 object names.
 
 ## Absolute Path
 

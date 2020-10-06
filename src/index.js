@@ -3,7 +3,7 @@ const R = require('ramda');
 const { mergeMap, tap } = require('rxjs/operators')
 
 const { streamDirectories$ } = require('./files')
-const { uploadStreamToS3$, s3BucketDownload$ } = require('./s3')
+const { uploadStreamToS3$, s3BucketDownload$, verifyStreamHashOnS3$ } = require('./s3')
 const { chunk$ } = require('./generic')
 
 const { getConfig$ } = require('./configs')
@@ -31,12 +31,25 @@ const sourceObservable = R.ifElse(
 )
 
 const destinationObservable = R.curry((config, sourceStream) => {
-  return uploadStreamToS3$(
-    configAccessors.destinationS3Bucket(config), 
-    configAccessors.destinationS3Endpoint(config), 
-    configAccessors.destinationCredentials(config), 
-    sourceStream
-  )
+  return R.ifElse(
+    configAccessors.operationIsTransfer,
+    R.converge(
+      uploadStreamToS3$(R.__, R.__, R.__, sourceStream),
+      [
+        configAccessors.destinationS3Bucket,
+        configAccessors.destinationS3Endpoint,
+        configAccessors.destinationCredentials
+      ]
+    ),
+    R.converge(
+      verifyStreamHashOnS3$(R.__, R.__, R.__, sourceStream),
+      [
+        configAccessors.destinationS3Bucket,
+        configAccessors.destinationS3Endpoint,
+        configAccessors.destinationCredentials
+      ]
+    )
+  )(config)
 })
 
 function handleError (err) {
@@ -50,9 +63,9 @@ getConfig$(CONFIG_PATH)
       chunk$(
         sourceObservable(config),
         (chunked$) => chunked$.pipe(
-          tap((sourceStream) => {console.log(`Transferring: ${streamPath(sourceStream)}`)}),
+          tap((sourceStream) => {console.log(`Doing: ${streamPath(sourceStream)}`)}),
           mergeMap(destinationObservable(config)),
-          tap((sourceStream) => {console.log(`Transferred: ${streamPath(sourceStream)}`)})
+          tap((sourceStream) => {console.log(`Done: ${streamPath(sourceStream)}`)})
         ),
         CONCURRENCY
       ).subscribe(

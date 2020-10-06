@@ -15,6 +15,7 @@ const s3ObjectMetadataAccessors = {
 }
 
 const configAccessors = {
+  operationIsTransfer: R.compose(R.equals('transfer'), R.defaultTo('transfer'), R.prop('operation')),
   sourceCredentialsPath: R.path(['source', 'credentials_path']),
   destinationCredentialsPath: R.path(['destination', 'credentials_path']),
   sourceCredentials: R.path(['source', 'credentials']),
