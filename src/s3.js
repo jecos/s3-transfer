@@ -22,17 +22,29 @@ const createFileStream = R.curry((path, stream) => R.compose(
 const getBucketObjects = R.view(s3BucketObjectsAccessors.objectsLens)
 const getS3ObjectMetadataKey = R.view(s3ObjectMetadataAccessors.keyLens)
 
+function getS3(endpoint, credentials) {
+  const endpointInst = new aws.Endpoint(endpoint);
+  let options = {
+    endpoint: endpointInst,
+    s3ForcePathStyle: true,
+    signatureVersion: 'v4'
+  };
+  const accessKeyId = getAccessKeyId(credentials)
+  const secretAccessKey = getAccessKeySecret(credentials)
+  if(accessKeyId){
+    options.accessKeeyId = accessKeyId;
+  }
+  if(secretAccessKey){
+    options.secretAccessKey = secretAccessKey;
+  }
+  return new aws.S3(options);
+
+}
+
 const uploadStreamToS3$ = R.curry((bucket, endpoint, credentials, sourceStream) => {
   return new Observable(function (observer) {
     const unsubscribe = () => {}
-    const endpointInst = new aws.Endpoint(endpoint);
-    const s3 = new aws.S3({
-      endpoint: endpointInst,
-      accessKeyId: getAccessKeyId(credentials),
-      secretAccessKey: getAccessKeySecret(credentials),
-      s3ForcePathStyle: true,
-      signatureVersion: 'v4'
-    })
+    const s3 = getS3(endpoint, credentials)
     const writeStream = new stream.PassThrough()
     const promise = s3.upload({ 
       Bucket: bucket, 
@@ -55,14 +67,7 @@ const uploadStreamToS3$ = R.curry((bucket, endpoint, credentials, sourceStream) 
 const listS3BucketObjects$ = R.curry((bucket, endpoint, credentials) => {
   return new Observable(function (observer) {
     const unsubscribe = () => {}
-    const endpointInst = new aws.Endpoint(endpoint);
-    const s3 = new aws.S3({
-      endpoint: endpointInst,
-      accessKeyId: getAccessKeyId(credentials),
-      secretAccessKey: getAccessKeySecret(credentials),
-      s3ForcePathStyle: true,
-      signatureVersion: 'v4'
-    })
+    const s3 = getS3(endpoint, credentials)
     s3.listObjects({ Bucket: bucket }, function(err, data) {
       if (err) {
         observer.error(`Bucket ${bucket} objects listing failed: ${err.message}`)
@@ -76,14 +81,7 @@ const listS3BucketObjects$ = R.curry((bucket, endpoint, credentials) => {
 })
 
 const s3ObjectReadStream$ = (bucket, endpoint, credentials, sourceStream) => {
-  const endpointInst = new aws.Endpoint(endpoint);
-  const s3 = new aws.S3({
-    endpoint: endpointInst,
-    accessKeyId: getAccessKeyId(credentials),
-    secretAccessKey: getAccessKeySecret(credentials),
-    s3ForcePathStyle: true,
-    signatureVersion: 'v4'
-  })
+  const s3 = getS3(endpoint, credentials)
   const s3Stream = s3.getObject({
     Bucket: bucket, 
     Key: getFilestreamPath(sourceStream)
